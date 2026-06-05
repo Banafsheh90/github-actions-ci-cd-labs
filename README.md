@@ -16,9 +16,9 @@ More labs will be added as the repository expands.
 
 ## Workflows
 
-| Workflow | Related Lab | Description |
-|---|---|---|
-| `.github/workflows/django-ci.yml` | Django CI Workflow | Runs Django tests across multiple Python versions using GitHub Actions |
+* `.github/workflows/django-ci.yml`
+  Runs the Django CI workflow and tests the project across multiple Python versions.
+
 
 ## Key Concepts Practiced
 
