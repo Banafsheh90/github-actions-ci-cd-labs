@@ -1,23 +1,75 @@
-# 01_05 Challenge: Build a CI Workflow for a Python Project
+# Django CI Workflow
 
-In this challenge, you’ll create a **continuous integration (CI) workflow** for a Django application using **GitHub Actions**. You’ll start from a brand-new repository, add the project files, configure a starter workflow, and debug a failing build until the workflow completes successfully.
+This lab implements a GitHub Actions CI workflow for a Django project. The goal is to run automated checks in a clean GitHub-hosted runner and verify that the project can install its dependencies and pass its test suite outside the local development environment.
 
-By the end of this challenge, you’ll have hands-on experience using GitHub Actions starter workflows, updating workflow configurations, and diagnosing common CI failures.
+## Project Structure
 
-## Challenge tasks
+```text
+challenge-01-django-ci/
+├── dashboard/
+├── engineering_dept/
+├── marketing_dept/
+├── sales_dept/
+├── manage.py
+├── requirements.txt
+└── README.md
+```
 
-To complete this challenge, you will:
+The Django project is stored in this subdirectory, while the workflow file is stored at the repository level:
 
-- Create a new GitHub repository for a Django project
-- Upload project files while preserving directory structure
-- Configure a Django CI workflow using a starter template
-- Update Python versions and GitHub Action versions
-- Observe, diagnose, and fix a failing workflow
-- Trigger and verify a successful CI run
+```text
+.github/workflows/django-ci.yml
+```
 
-This challenge should take 15 to 20 minutes to complete.
+Because the project is not located in the repository root, the workflow uses a working directory configuration:
 
-<!-- FooterStart -->
----
-[← 01_04 Set Up CI for Go](../01_04_ci_for_go/README.md) | [01_06 Solution: Build a CI Workflow for a Python Project →](../01_06_solution_ci_workflow/README.md)
-<!-- FooterEnd -->
+```yaml
+defaults:
+  run:
+    working-directory: challenge-01-django-ci
+```
+
+This ensures that commands such as dependency installation and test execution run from the correct project folder.
+
+## Workflow Overview
+
+The workflow runs on pushes and pull requests to the `main` branch.
+
+It performs the following steps:
+
+* checks out the repository files
+* sets up Python
+* installs project dependencies from `requirements.txt`
+* runs the Django test suite with `python manage.py test`
+
+The workflow also uses a matrix strategy to test the project across multiple Python versions:
+
+* Python 3.11
+* Python 3.12
+* Python 3.13
+* Python 3.14
+
+## Debugging Result
+
+The first workflow run failed during the test step. The logs showed that one test required `numpy`, but `numpy` was not listed in `requirements.txt`.
+
+The issue was fixed by adding `numpy` to the project dependencies:
+
+```text
+Django>=5.0,<6.0
+numpy
+```
+
+After updating the dependency file and pushing the change, all matrix jobs completed successfully.
+
+## Key Concepts Practiced
+
+* GitHub Actions workflow configuration
+* CI triggers for push and pull request events
+* GitHub-hosted runners
+* Python setup in CI
+* Dependency installation from `requirements.txt`
+* Django test execution in GitHub Actions
+* Matrix builds across multiple Python versions
+* Reading workflow logs to identify failure causes
+* Fixing missing dependency issues in a reproducible way
