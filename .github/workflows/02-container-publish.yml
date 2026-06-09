@@ -1,0 +1,81 @@
+name: Container Image Delivery
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "challenge-02-container-image/**"
+      - ".github/workflows/02-container-python-ci.yml"
+      - ".github/workflows/02-container-publish.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "challenge-02-container-image/**"
+      - ".github/workflows/02-container-python-ci.yml"
+      - ".github/workflows/02-container-publish.yml"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/challenge-02-container-image
+
+jobs:
+  integration:
+    uses: ./.github/workflows/02-container-python-ci.yml
+    permissions:
+      contents: read
+      checks: write
+
+  build:
+    needs: [integration]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v4.0.0
+        with:
+          cosign-release: "v2.2.4"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.12.0
+
+      - name: Log into GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5.10.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: ./challenge-02-container-image
+          file: ./challenge-02-container-image/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Sign the published Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
